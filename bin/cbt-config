@@ -1,0 +1,101 @@
+#!/usr/bin/env python
+#
+# This script writes the configuration file for using the OANDA API
+
+import argparse, os, sys
+from copy import copy
+from collections import OrderedDict
+from pyCBT.providers.oanda import account
+from pyCBT.common.path import exist
+
+
+# INITIALIZE VARIABLES -----------------------------------------------------------------------------
+# initialize comand line & file summary variables
+cmd_kwargs = OrderedDict()
+fil_kwargs = OrderedDict()
+# define config
+config = account.Config()
+
+# PARSE COMMAND LINE ARGUMENTS ---------------------------------------------------------------------
+# define parser
+parser = argparse.ArgumentParser()
+# add parameters to parser
+for arg in config.attr_names:
+    # don't include accounts in parser
+    if arg == "accounts": continue
+    # define attribute keywords for safe manipulation
+    kwargs = OrderedDict()
+    kwargs["help"] = config.attr_helps[arg]
+    if config.attr_types[arg] is not None:
+        kwargs["type"] = config.attr_types[arg]
+    # add attribute to parser
+    parser.add_argument("--{}".format(arg), **kwargs)
+# add interactive option
+parser.add_argument("--interactive", help="Update config attributes interactively", action="store_true")
+# parse arguments from command line (cmd)
+args = parser.parse_args()
+
+# UPDATE CONFIG ATTRIBUTES DEFAULT VALUES ----------------------------------------------------------
+# build cmd arguments for configuration file
+cmd_kwargs.update(args._get_kwargs())
+cmd_kwargs.pop("interactive")
+cmd_kwargs = dict((arg, val) for arg, val in cmd_kwargs.iteritems() if val is not None)
+# define filename choices
+filenames = [
+    config.get_filename(),
+    "Do not load from file"
+]
+if "account" in cmd_kwargs: filenames = [config.get_filename(cmd_kwargs.get("account"))] + filenames
+filenames = filter(exist, filenames)
+if args.interactive and len(filenames) > 1:
+    filename = config.ask_the_user(
+        header="Going to load config file",
+        choices=filenames,
+        default=filenames[0]
+    )
+    if filename != filenames[-1]:
+        with open(filename, "r") as IN:
+            fil_kwargs.update(config.get_from(IN))
+# update attribute defaults to file if available & command line argument values, in that order
+config.update_defaults(**fil_kwargs)
+config.update_defaults(**cmd_kwargs)
+
+# SET SUMMARY ATTRIBUTES ---------------------------------------------------------------------------
+# ask/set attributes
+# ask if interactive
+if args.interactive:
+    config.ask_attributes()
+else:
+    if None in config.attr_defaults.values():
+        config.ask_attributes(only_missing=True)
+# set summary config
+config.set_summary()
+
+# SAVE SUMMARY(?) ----------------------------------------------------------------------------------
+# display summary
+print
+print "Summary config:"
+print
+config.dump_to(sys.stdout)
+# save to file?
+# define filename choices
+filenames = [
+    config.get_filename(),
+    config.get_filename(config.summary["account"]),
+    "Do not save in file"
+]
+choices = map(
+    lambda f: "(replace) {}".format(f) if exist(f) else ("          {}").format(f), filenames
+)
+choice = config.ask_the_user(
+    header="Save summary in config file",
+    choices=choices,
+    default=choices[0]
+)
+filename = filenames[choices.index(choice)]
+if filename != filenames[-1]:
+    with open(filename, "w") as OUT:
+        config.dump_to(OUT)
+    print
+    print "Config file saved."
+print

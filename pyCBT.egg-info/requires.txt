@@ -1,0 +1,11 @@
+lxml==4.1.1
+numpy==1.14.1
+oandapyV20==0.5.0
+pandas==0.22.0
+python_dateutil==2.6.1
+pytz==2018.3
+ruamel.yaml==0.15.35
+selenium==3.10.0
+html5lib==1.0.1
+beautifulsoup4==4.6.0
+openpyxl==2.5.0

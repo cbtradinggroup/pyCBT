@@ -1,0 +1,10 @@
+!!omap
+- token: 5999fa8263afcde8ec12bda39ff18c4f-b66165ac6b7e13f7b23cceee83750356
+- environment: practice
+- timeout: 10.0
+- accounts:
+  - 101-004-7835907-001
+- account: 101-004-7835907-001
+- username: ajmejia
+- timezone: America/New_York
+- datetime_format: RFC3339

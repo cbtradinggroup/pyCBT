@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+from pyCBT.providers.scrappers import investing
+from pyCBT.common._helpers import parse_args, dump_data
+
+
+if __name__ == "__main__":
+    # parse command line arguments
+    args, kwargs = parse_args()
+
+    # retrieve calendar
+    calendar = investing.EconomicData(
+        url=kwargs.get("url"),
+        from_date=kwargs.get("from_date"),
+        to_date=kwargs.get("to_date")
+    )
+    table = calendar.as_dataframe()
+    calendar.browser.close()
+
+    # dump data into file
+    dump_data(table, **kwargs)

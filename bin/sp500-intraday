@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+#
+# This module is based on the code published at
+# http://dacatay.com/data-science/download-free-intraday-stock-data-from-google-finance-with-python/
+#
+import csv
+import datetime
+import re
+import codecs
+import requests
+import pandas as pd
+
+def get_google_finance_intraday(ticker, period=60, days=1, exchange='NASD'):
+    """
+    Retrieve intraday stock data from Google Finance.
+
+    Parameters
+    ----------------
+    ticker : str
+        Company ticker symbol.
+    period : int
+        Interval between stock values in seconds.
+        i = 60 corresponds to one minute tick data
+        i = 86400 corresponds to daily data
+    days : int
+        Number of days of data to retrieve.
+    exchange : str
+        Exchange from which the quotes should be fetched
+
+    Returns
+    ---------------
+    df : pandas.DataFrame
+        DataFrame containing the opening price, high price, low price,
+        closing price, and volume. The index contains the times associated with
+        the retrieved price values.
+    """
+
+    # build url
+    url = 'https://finance.google.com/finance/getprices' + \
+          '?p={days}d&f=d,o,h,l,c,v&q={ticker}&i={period}&x={exchange}'.format(ticker=ticker,
+                                                                               period=period,
+                                                                               days=days,
+                                                                               exchange=exchange)
+
+    page = requests.get(url)
+    reader = csv.reader(codecs.iterdecode(page.content.splitlines(), "utf-8"))
+    columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+    rows = []
+    times = []
+    for row in reader:
+        if re.match('^[a\d]', row[0]):
+            if row[0].startswith('a'):
+                start = datetime.datetime.fromtimestamp(int(row[0][1:]))
+                times.append(start)
+            else:
+                times.append(start+datetime.timedelta(seconds=period*int(row[0])))
+            rows.append(map(float, row[1:]))
+    if len(rows):
+        return pd.DataFrame(rows, index=pd.DatetimeIndex(times, name='Date'), columns=columns)
+    else:
+        return pd.DataFrame(rows, index=pd.DatetimeIndex(times, name='Date'))
+
+if __name__ == "__main__":
+    df = get_google_finance_intraday(".INX", period=60, days=1, exchange="INDEXSP")
+
+    df.reset_index().to_excel("sp500-diario.xlsx", index=False)
